@@ -75,8 +75,8 @@ grep "SUBLEVEL =" Makefile > localv.txt
 SUBLVL="$(sed 's/SUBLEVEL = //g' localv.txt)"
 LOCALV=4.9.$SUBLVL
 
-# Clean up out rm
-folder -rf out/*
+# Clean up out
+rm -rf out/*
 
 # Post build compilation information in $CHATID
 curl -s -X POST "https://api.telegram.org/bot$BOTTOKEN/sendMessage" -d chat_id="-$CHATID" \
