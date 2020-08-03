@@ -18,6 +18,26 @@ else
     cd ..
 fi
 
+# Incremental releases go brr
+
+git clone https://github.com/Lyceris-chan/incremental_release incremental
+	
+# Read the value from the file
+  value=`cat incremental/value.dat`
+
+# increment the value
+value=$((value + 1))
+
+# and save it for next time
+echo "${value}" > incremental/value.dat
+
+# push to git
+cd incremental
+git add .
+git commit -m +1
+git push
+cd ..
+
 # Main variables
 CORES=$(grep -c ^processor /proc/cpuinfo)
 THREAD="-j$CORES"
@@ -28,6 +48,8 @@ PARSE_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 COMMIT_POINT="$(git log --pretty=format:'%h : %s' -1)"
 export PATH="$(pwd)/proton-clang/bin:$PATH"
 export KBUILD_COMPILER_STRING="$($(pwd)/proton-clang/bin/clang --version | head -n 1 | perl -pe 's/\((?:http|git).*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')";
+RELEASE=$(cat incremental/value.dat)
+
 
 # Clone private repo with the $BOTTOKEN and $CHATID
 FILE="$(pwd)/bapi/bottoken.txt"
@@ -47,8 +69,14 @@ BOTTOKEN="$(sed 's/BOTTOKEN = //g' $(pwd)/bapi/bottoken.txt)"
 CHATID="$(sed 's/CHATID = //g' $(pwd)/bapi/chatid.txt)"
 fi
 
-# Clean up out folder
-rm -rf out/*
+# Figure out the localversion
+rm -rf localv.txt
+grep "SUBLEVEL =" Makefile > localv.txt
+SUBLVL="$(sed 's/SUBLEVEL = //g' localv.txt)"
+LOCALV=4.9.$SUBLVL
+
+# Clean up out rm
+folder -rf out/*
 
 # Post build compilation information in $CHATID
 curl -s -X POST "https://api.telegram.org/bot$BOTTOKEN/sendMessage" -d chat_id="-$CHATID" \
@@ -57,10 +85,13 @@ curl -s -X POST "https://api.telegram.org/bot$BOTTOKEN/sendMessage" -d chat_id="
               -d text="⚙️Build for \`Daisy / Sakura (non SAR)\` started at \`$DATE\` using \`$CORES\` threads.
 
 Compiler: \`$KBUILD_COMPILER_STRING\`
-Localversion: \`$LOCALVERSION\`
+Localversion: \`$LOCALV\`
+
+Release: \`r$RELEASE\`
 
 Branch: \`$PARSE_BRANCH\`
 Commit: \`$COMMIT_POINT\`
+
 
 Kernel: \`Sleepy\`"
 
@@ -95,11 +126,11 @@ cp $(pwd)/out/arch/arm64/boot/Image.gz-dtb AnyKernel3
 rm -rf $(pwd)/AnyKernel3/*.zip
 BUILD_TIME=$(date +"%d%m%Y-%H%M")
 cd AnyKernel3
-zip -r9 Sleepy-${BUILD_TIME}.zip *
+zip -r9 Sleepy-r${RELEASE}-${BUILD_TIME}.zip *
 cd ..
 
 # Post release in channel
-curl -F document=@"$(pwd)/AnyKernel3/Sleepy-${BUILD_TIME}.zip" "https://api.telegram.org/bot$BOTTOKEN/sendDocument" \
+curl -F document=@"$(pwd)/AnyKernel3/Sleepy-r${RELEASE}-${BUILD_TIME}.zip" "https://api.telegram.org/bot$BOTTOKEN/sendDocument" \
             -F chat_id="-$CHATID"  \
             -F "disable_web_page_preview=true" \
             -F "parse_mode=Markdown" \
