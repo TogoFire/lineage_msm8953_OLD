@@ -19,9 +19,8 @@ else
 fi
 
 # Incremental releases go brr
-
-git clone https://github.com/Lyceris-chan/incremental_release incremental
-	
+FILE="incremental/value.dat"
+if [ -f "$FILE" ]; then
 # Read the value from the file
   value=`cat incremental/value.dat`
 
@@ -37,6 +36,27 @@ git add .
 git commit -m +1
 git push
 cd ..
+
+else
+
+git clone https://github.com/Lyceris-chan/incremental_release incremental
+
+# Read the value from the file
+value=`cat incremental/value.dat`
+
+# increment the value
+value=$((value + 1))
+
+# and save it for next time
+echo "${value}" > incremental/value.dat
+
+# push to git
+cd incremental
+git add .
+git commit -m +1
+git push
+cd ..
+
 
 # Main variables
 CORES=$(grep -c ^processor /proc/cpuinfo)
